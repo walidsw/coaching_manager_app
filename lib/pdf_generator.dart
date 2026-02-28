@@ -115,7 +115,7 @@ class PdfGenerator {
                 1: pw.FixedColumnWidth(60),
                 2: pw.FlexColumnWidth(2),
                 3: pw.FixedColumnWidth(80),
-                4: pw.FixedColumnWidth(60),
+                4: pw.FixedColumnWidth(75),
               },
               children: [
                 // Table Header

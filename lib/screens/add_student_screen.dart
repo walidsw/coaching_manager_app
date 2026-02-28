@@ -115,109 +115,237 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
     }
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF0F4F8),
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Student Details' : 'Registration Form'),
-        backgroundColor: Colors.green,
+        title: Text(_isEditing ? 'Edit Student Profile' : 'Student Registration', style: const TextStyle(fontWeight: FontWeight.w700)),
+        backgroundColor: Colors.indigo.shade800,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildSectionTitle('Personal Information'),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Student Name *', border: OutlineInputBorder()),
-                validator: (val) => val == null || val.isEmpty ? 'Please enter name' : null,
+        child: Column(
+          children: [
+            // Header Banner
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.only(left: 20, right: 20, bottom: 24, top: 12),
+              decoration: BoxDecoration(
+                color: Colors.indigo.shade800,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(32),
+                  bottomRight: Radius.circular(32),
+                ),
               ),
-              const SizedBox(height: 16),
-              _buildSectionTitle('Parental Information'),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: TextFormField(controller: _fatherNameController, decoration: const InputDecoration(labelText: "Father's Name", border: OutlineInputBorder()))),
-                  const SizedBox(width: 16),
-                  Expanded(child: TextFormField(controller: _motherNameController, decoration: const InputDecoration(labelText: "Mother's Name", border: OutlineInputBorder()))),
-                ],
+              child: Text(
+                _isEditing ? 'Update the details below to keep the student records current.' : 'Fill out the form below to enroll a new student into a batch.',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 15),
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: TextFormField(controller: _fatherMobileController, decoration: const InputDecoration(labelText: "Father's Mobile", border: OutlineInputBorder()), keyboardType: TextInputType.phone)),
-                  const SizedBox(width: 16),
-                  Expanded(child: TextFormField(controller: _altMobileController, decoration: const InputDecoration(labelText: "Alt Mobile", border: OutlineInputBorder()), keyboardType: TextInputType.phone)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildSectionTitle('Academic Details'),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Class *', border: OutlineInputBorder()),
-                      value: _selectedClass,
-                      items: _classes.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _selectedClass = val);
-                      },
+            ),
+            
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildSectionCard(
+                      'Personal Information',
+                      Icons.person_outline,
+                      Colors.teal,
+                      [
+                        _buildTextField(_nameController, "Student's Full Name", Icons.badge_outlined, isRequired: true),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _sectionController,
-                      decoration: const InputDecoration(labelText: 'Section', border: OutlineInputBorder()),
+                    
+                    const SizedBox(height: 16),
+                    
+                    _buildSectionCard(
+                      'Parental Information',
+                      Icons.family_restroom,
+                      Colors.orange,
+                      [
+                        _buildResponsiveFields(
+                          _buildTextField(_fatherNameController, "Father's Name", null),
+                          _buildTextField(_motherNameController, "Mother's Name", null),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildResponsiveFields(
+                          _buildTextField(_fatherMobileController, "Father's Mobile", Icons.phone_android, isPhone: true),
+                          _buildTextField(_altMobileController, "Alt Mobile", Icons.phone_android, isPhone: true),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              if (_isEditing) ...[
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Status', border: OutlineInputBorder()),
-                  initialValue: _selectedStatus,
-                  items: const [
-                    DropdownMenuItem(value: 'active', child: Text('Active')),
-                    DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
+
+                    const SizedBox(height: 16),
+
+                    _buildSectionCard(
+                      'Academic Details',
+                      Icons.school_outlined,
+                      Colors.blue,
+                      [
+                        _buildResponsiveFields(
+                          DropdownButtonFormField<String>(
+                            decoration: _inputDecoration('Class *', Icons.class_outlined),
+                            value: _selectedClass,
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.indigo),
+                            dropdownColor: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            items: _classes.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontWeight: FontWeight.w500)))).toList(),
+                            onChanged: (val) {
+                              if (val != null) setState(() => _selectedClass = val);
+                            },
+                          ),
+                          _buildTextField(_sectionController, "Section", Icons.meeting_room_outlined),
+                        ),
+                        if (_isEditing) ...[
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<String>(
+                            decoration: _inputDecoration('Status', Icons.check_circle_outline),
+                            initialValue: _selectedStatus,
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.indigo),
+                            dropdownColor: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            items: const [
+                              DropdownMenuItem(value: 'active', child: Text('Active Enrollment', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold))),
+                              DropdownMenuItem(value: 'inactive', child: Text('Inactive / Left', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) setState(() => _selectedStatus = val);
+                            },
+                          ),
+                        ],
+                      ],
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Color(0xFF00BFA5), Color(0xFF0097A7)]),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(color: const Color(0xFF00BFA5).withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4)),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        onPressed: _isSaving ? null : _saveStudent,
+                        child: _isSaving 
+                            ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                            : Text(
+                                _isEditing ? 'Save Changes' : 'Complete Registration',
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
                   ],
-                  onChanged: (val) {
-                    if (val != null) setState(() => _selectedStatus = val);
-                  },
-                ),
-              ],
-              const SizedBox(height: 32),
-              SizedBox(
-                height: 48,
-                child: ElevatedButton.icon(
-                  onPressed: _isSaving ? null : _saveStudent,
-                  icon: _isSaving ? const SizedBox.shrink() : const Icon(Icons.save),
-                  label: _isSaving ? const CircularProgressIndicator() : Text(_isEditing ? 'Update Profile' : 'Register Student'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildResponsiveFields(Widget child1, Widget child2) {
+    if (MediaQuery.of(context).size.width < 500) {
+      return Column(
+        children: [
+          child1,
+          const SizedBox(height: 16),
+          child2,
+        ],
+      );
+    } else {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: child1),
+          const SizedBox(width: 12),
+          Expanded(child: child2),
+        ],
+      );
+    }
+  }
+
+  Widget _buildSectionCard(String title, IconData icon, MaterialColor color, List<Widget> children) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      color: Colors.green.shade50,
-      child: Text(
-        title,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green.shade900),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(color: Colors.blueGrey.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: color.shade50, borderRadius: BorderRadius.circular(10)),
+                child: Icon(icon, size: 20, color: color.shade700),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.blueGrey.shade800),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label, IconData? icon) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+      prefixIcon: icon != null ? Icon(icon, color: Colors.indigo.shade300, size: 20) : null,
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.indigo.shade400, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.red.shade300),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Colors.red, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String label, IconData? icon, {bool isRequired = false, bool isPhone = false}) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
+      decoration: _inputDecoration(label, icon),
+      validator: isRequired ? (val) => val == null || val.isEmpty ? 'Required' : null : null,
     );
   }
 }

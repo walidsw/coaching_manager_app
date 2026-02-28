@@ -19,8 +19,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 3,
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
     );
   }
@@ -42,7 +43,8 @@ class DatabaseHelper {
         alternative_mobile TEXT,
         current_class TEXT NOT NULL,
         section TEXT,
-        status TEXT DEFAULT 'active'
+        status TEXT DEFAULT 'active',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
 
@@ -131,6 +133,84 @@ class DatabaseHelper {
 
     // Seed default admin password
     await db.insert('AppConfig', {'key': 'admin_password', 'value': 'admin'});
+
+    // 8. Teachers Table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS Teachers (
+        teacher_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        subject TEXT,
+        phone TEXT,
+        monthly_salary REAL NOT NULL DEFAULT 0.0,
+        status TEXT DEFAULT 'active'
+      )
+    ''');
+
+    // 9. TeacherSalary Table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS TeacherSalary (
+        salary_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        teacher_id INTEGER NOT NULL,
+        month TEXT NOT NULL,
+        year TEXT NOT NULL,
+        amount_paid REAL NOT NULL DEFAULT 0.0,
+        paid_status TEXT DEFAULT 'unpaid',
+        FOREIGN KEY(teacher_id) REFERENCES Teachers(teacher_id) ON DELETE CASCADE
+      )
+    ''');
+
+    // 10. Costs Table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS Costs (
+        cost_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category TEXT NOT NULL,
+        name TEXT NOT NULL,
+        amount REAL NOT NULL,
+        month TEXT NOT NULL,
+        year TEXT NOT NULL,
+        note TEXT
+      )
+    ''');
+  }
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS Teachers (
+          teacher_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          subject TEXT,
+          phone TEXT,
+          monthly_salary REAL NOT NULL DEFAULT 0.0,
+          status TEXT DEFAULT 'active'
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS TeacherSalary (
+          salary_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          teacher_id INTEGER NOT NULL,
+          month TEXT NOT NULL,
+          year TEXT NOT NULL,
+          amount_paid REAL NOT NULL DEFAULT 0.0,
+          paid_status TEXT DEFAULT 'unpaid',
+          FOREIGN KEY(teacher_id) REFERENCES Teachers(teacher_id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS Costs (
+          cost_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          category TEXT NOT NULL,
+          name TEXT NOT NULL,
+          amount REAL NOT NULL,
+          month TEXT NOT NULL,
+          year TEXT NOT NULL,
+          note TEXT
+        )
+      ''');
+    }
+    if (oldVersion < 3) {
+      await db.execute("ALTER TABLE Students ADD COLUMN created_at TEXT DEFAULT '2026-02-01 00:00:00'");
+    }
   }
 
   // --- Admin Operations ---
@@ -401,12 +481,45 @@ class DatabaseHelper {
 
   Future<double> getTotalRevenue() async {
     final db = await instance.database;
-    String currentYear = DateTime.now().year.toString();
-    final result = await db.rawQuery("SELECT SUM(amount) as total FROM Payments WHERE year = ? AND paid_status = 'paid'", [currentYear]);
+    final result = await db.rawQuery("SELECT SUM(amount) as total FROM Payments WHERE paid_status = 'paid'");
     if (result.isNotEmpty && result.first['total'] != null) {
       return (result.first['total'] as num).toDouble();
     }
     return 0.0;
+  }
+
+  /// Returns the total amount still owed by ALL active students for the current month.
+  /// Formula: SUM(class monthly fee) for every active student  −  SUM(amount paid this month)
+  Future<double> getTotalDueThisMonth() async {
+    final db = await instance.database;
+    final now = DateTime.now();
+    final List<String> months = ["January","February","March","April","May","June",
+      "July","August","September","October","November","December"];
+    final String month = months[now.month - 1];
+    final String year = now.year.toString();
+
+    // Total fees owed = sum of each active student's class fee
+    final feeResult = await db.rawQuery('''
+      SELECT SUM(c.monthly_fee) as total
+      FROM Students s
+      JOIN Classes c ON c.class_name = s.current_class
+      WHERE s.status = 'active'
+    ''');
+    final double totalFee = (feeResult.isNotEmpty && feeResult.first['total'] != null)
+        ? (feeResult.first['total'] as num).toDouble()
+        : 0.0;
+
+    // Total already paid this month
+    final paidResult = await db.rawQuery(
+      "SELECT SUM(amount) as paid FROM Payments WHERE month = ? AND year = ?",
+      [month, year],
+    );
+    final double paid = (paidResult.isNotEmpty && paidResult.first['paid'] != null)
+        ? (paidResult.first['paid'] as num).toDouble()
+        : 0.0;
+
+    final double due = totalFee - paid;
+    return due > 0 ? due : 0.0;
   }
 
   Future<int> getTotalPayments() async {
@@ -416,8 +529,151 @@ class DatabaseHelper {
     return result.first['count'] as int;
   }
 
+  // ─── Monthly Analytics ──────────────────────────────────────
+
+  Future<double> getTotalEarnedThisMonth() async {
+    final db = await instance.database;
+    final now = DateTime.now();
+    final List<String> months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    final month = months[now.month - 1];
+    final year = now.year.toString();
+    final result = await db.rawQuery("SELECT SUM(amount) as total FROM Payments WHERE month = ? AND year = ? AND paid_status = 'paid'", [month, year]);
+    return (result.isNotEmpty && result.first['total'] != null) ? (result.first['total'] as num).toDouble() : 0.0;
+  }
+
+  Future<double> getTotalTutorFeeThisMonth() async {
+    final db = await instance.database;
+    final now = DateTime.now();
+    final List<String> months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    final month = months[now.month - 1];
+    final year = now.year.toString();
+    final result = await db.rawQuery("SELECT SUM(amount_paid) as total FROM TeacherSalary WHERE month = ? AND year = ?", [month, year]);
+    return (result.isNotEmpty && result.first['total'] != null) ? (result.first['total'] as num).toDouble() : 0.0;
+  }
+
+  Future<double> getTotalCostThisMonth() async {
+    final db = await instance.database;
+    final now = DateTime.now();
+    final List<String> months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    final month = months[now.month - 1];
+    final year = now.year.toString();
+    final result = await db.rawQuery("SELECT SUM(amount) as total FROM Costs WHERE month = ? AND year = ?", [month, year]);
+    return (result.isNotEmpty && result.first['total'] != null) ? (result.first['total'] as num).toDouble() : 0.0;
+  }
+
+  Future<double> getNetRevenueThisMonth() async {
+    final earned = await getTotalEarnedThisMonth();
+    final tutorFee = await getTotalTutorFeeThisMonth();
+    final cost = await getTotalCostThisMonth();
+    return earned - tutorFee - cost;
+  }
+
+  Future<int> getNewStudentsThisMonth() async {
+    final db = await instance.database;
+    // SQLite CURRENT_TIMESTAMP is in UTC '%Y-%m-%d %H:%M:%S'
+    // We compare strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')
+    // To handle local time accurately without complex sqlite datetime config:
+    final now = DateTime.now();
+    final monthStr = now.month.toString().padLeft(2, '0');
+    final query = "SELECT COUNT(*) as count FROM Students WHERE created_at LIKE '${now.year}-$monthStr-%'";
+    final result = await db.rawQuery(query);
+    return result.first['count'] as int;
+  }
+
+  // ─── Teacher Operations ──────────────────────────────────
+  Future<int> addTeacher(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('Teachers', data);
+  }
+
+  Future<List<Map<String, dynamic>>> getTeachers({bool activeOnly = true}) async {
+    final db = await instance.database;
+    if (activeOnly) {
+      return await db.query('Teachers', where: 'status = ?', whereArgs: ['active'], orderBy: 'name ASC');
+    }
+    return await db.query('Teachers', orderBy: 'name ASC');
+  }
+
+  Future<void> updateTeacher(int teacherId, Map<String, dynamic> data) async {
+    final db = await instance.database;
+    await db.update('Teachers', data, where: 'teacher_id = ?', whereArgs: [teacherId]);
+  }
+
+  Future<void> deleteTeacher(int teacherId) async {
+    final db = await instance.database;
+    await db.update('Teachers', {'status': 'inactive'}, where: 'teacher_id = ?', whereArgs: [teacherId]);
+  }
+
+  Future<Map<String, dynamic>?> getSalaryRecord(int teacherId, String month, String year) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'TeacherSalary',
+      where: 'teacher_id = ? AND month = ? AND year = ?',
+      whereArgs: [teacherId, month, year],
+    );
+    return result.isNotEmpty ? Map<String, dynamic>.from(result.first) : null;
+  }
+
+  Future<void> upsertSalaryPayment(int teacherId, String month, String year, double amountPaid, String status) async {
+    final db = await instance.database;
+    final existing = await getSalaryRecord(teacherId, month, year);
+    if (existing == null) {
+      await db.insert('TeacherSalary', {
+        'teacher_id': teacherId, 'month': month, 'year': year,
+        'amount_paid': amountPaid, 'paid_status': status,
+      });
+    } else {
+      await db.update('TeacherSalary',
+        {'amount_paid': amountPaid, 'paid_status': status},
+        where: 'teacher_id = ? AND month = ? AND year = ?',
+        whereArgs: [teacherId, month, year],
+      );
+    }
+  }
+
+  // ─── Cost Operations ─────────────────────────────────────
+  Future<int> addCost(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('Costs', data);
+  }
+
+  Future<List<Map<String, dynamic>>> getCostsByMonth(String month, String year) async {
+    final db = await instance.database;
+    return await db.query('Costs',
+      where: 'month = ? AND year = ?',
+      whereArgs: [month, year],
+      orderBy: 'category ASC, cost_id ASC',
+    );
+  }
+
+  Future<void> updateCost(int costId, Map<String, dynamic> data) async {
+    final db = await instance.database;
+    await db.update('Costs', data, where: 'cost_id = ?', whereArgs: [costId]);
+  }
+
+  Future<void> deleteCost(int costId) async {
+    final db = await instance.database;
+    await db.delete('Costs', where: 'cost_id = ?', whereArgs: [costId]);
+  }
+
   Future<void> close() async {
     final db = await instance.database;
     db.close();
+  }
+
+  /// Deletes the entire database file and recreates it fresh.
+  /// All data is permanently lost. The singleton cache is cleared first.
+  Future<void> resetDatabase() async {
+    // Close and discard cached instance
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+    }
+    // Delete the physical file
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'coaching_center.db');
+    await deleteDatabase(path);
+    // Reinitialise — onCreate will run, seeding default data
+    _database = await _initDB('coaching_center.db');
   }
 }
