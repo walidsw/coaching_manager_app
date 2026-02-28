@@ -23,7 +23,6 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _totalStudents = 0;
   int _totalBatches = 0;
-  double _monthlyCollected = 0.0;
 
   @override
   void initState() {
@@ -35,11 +34,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final db = DatabaseHelper.instance;
     final totalStudents = await db.getTotalStudents();
     final totalBatches = await db.getTotalBatches();
-    final due = await db.getTotalDueThisMonth();
     setState(() {
       _totalStudents = totalStudents;
       _totalBatches = totalBatches;
-      _monthlyCollected = due;
     });
   }
 
@@ -103,8 +100,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _headerStat(_totalStudents.toString(), 'Students', Icons.people),
                       const SizedBox(width: 12),
                       _headerStat(_totalBatches.toString(), 'Batches', Icons.class_),
-                      const SizedBox(width: 12),
-                      _headerStat('৳${_monthlyCollected.toStringAsFixed(0)}', "Month's Due", Icons.warning_amber_rounded),
                     ],
                   ),
                 ],
@@ -143,7 +138,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _headerStat(String value, String label, IconData icon) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        height: 60, // Fixed height to ensure all boxes are perfectly uniform
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(12),
@@ -154,10 +150,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                  Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),

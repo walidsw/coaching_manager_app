@@ -299,72 +299,76 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
           BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          radius: 24,
-          backgroundColor: paymentColor.withValues(alpha: 0.15),
-          child: Icon(
-            isPaid ? Icons.check_circle_rounded : Icons.warning_amber_rounded,
-            color: paymentColor,
-            size: 28,
-          ),
-        ),
-        title: Text(
-          "${student['name']} (${student['unique_student_id']})",
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B)),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: paymentColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: paymentColor.withValues(alpha: 0.3)),
-                ),
-                child: Text(paymentLabel,
-                    style: TextStyle(fontSize: 12, color: paymentColor, fontWeight: FontWeight.w700)),
+      child: Column(
+        children: [
+          ListTile(
+            contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            leading: CircleAvatar(
+              radius: 24,
+              backgroundColor: paymentColor.withValues(alpha: 0.15),
+              child: Icon(
+                isPaid ? Icons.check_circle_rounded : Icons.warning_amber_rounded,
+                color: paymentColor,
+                size: 28,
               ),
-              const SizedBox(height: 6),
-              if (examsTaken > 0)
-                Text(
-                  'Avg: ${avgPercent.toStringAsFixed(1)}% ($examsTaken exams)',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
-                )
-              else
-                const Text('No exams yet', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
-            ],
+            ),
+            title: Text(
+              "${student['name']} (${student['unique_student_id']})",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B)),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: paymentColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: paymentColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(paymentLabel,
+                        style: TextStyle(fontSize: 12, color: paymentColor, fontWeight: FontWeight.w700)),
+                  ),
+                  const SizedBox(height: 6),
+                  if (examsTaken > 0)
+                    Text(
+                      'Avg: ${avgPercent.toStringAsFixed(1)}% ($examsTaken exams)',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
+                    )
+                  else
+                    const Text('No exams yet', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
+            isThreeLine: true,
           ),
-        ),
-        isThreeLine: true,
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.info_outline_rounded, color: Color(0xFF3B82F6)),
-              tooltip: 'View Profile',
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-              constraints: const BoxConstraints(),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => StudentDetailScreen(studentId: student['unique_student_id']),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.info_outline_rounded, color: Color(0xFF3B82F6), size: 22),
+                  tooltip: 'View Profile',
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => StudentDetailScreen(studentId: student['unique_student_id']),
+                    ),
+                  ).then((_) => _loadData()),
                 ),
-              ).then((_) => _loadData()),
+                IconButton(
+                  icon: const Icon(Icons.person_remove_rounded, color: Color(0xFFEF4444), size: 22),
+                  tooltip: 'Remove from batch',
+                  onPressed: () => _confirmRemoveStudent(student),
+                ),
+              ],
             ),
-            IconButton(
-              icon: const Icon(Icons.person_remove_rounded, color: Color(0xFFEF4444)),
-              tooltip: 'Remove from batch',
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-              constraints: const BoxConstraints(),
-              onPressed: () => _confirmRemoveStudent(student),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

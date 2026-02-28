@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import '../database_helper.dart';
 import '../pdf_generator.dart';
 
@@ -240,10 +241,11 @@ class _ExamMarksScreenState extends State<ExamMarksScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
+                                        AutoSizeText(
                                           student['name'],
                                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B)),
-                                          maxLines: 1,
+                                          maxLines: 2,
+                                          minFontSize: 10,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         Text(
