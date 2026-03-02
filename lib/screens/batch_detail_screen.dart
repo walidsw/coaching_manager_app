@@ -20,6 +20,7 @@ class BatchDetailScreen extends StatefulWidget {
 class _BatchDetailScreenState extends State<BatchDetailScreen> {
   List<Map<String, dynamic>> _students = [];
   bool _isLoading = true;
+  double _currentMonthlyFee = 0.0;
 
   // Batch stats
   int _totalStudents = 0;
@@ -39,6 +40,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _currentMonthlyFee = widget.monthlyFee;
     _loadData();
   }
 
@@ -46,6 +48,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
     setState(() => _isLoading = true);
     final db = DatabaseHelper.instance;
 
+    _currentMonthlyFee = await db.getClassFee(widget.className);
     final rawStudents = await db.getStudentsByClass(widget.className);
 
     List<Map<String, dynamic>> enriched = [];
@@ -66,7 +69,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
           break;
         }
       }
-      final double due = widget.monthlyFee - paidAmount;
+      final double due = _currentMonthlyFee - paidAmount;
       final bool isPaid = due <= 0;
       if (isPaid) paidCount++;
       totalDue += due > 0 ? due : 0;
@@ -154,7 +157,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
               MaterialPageRoute(
                 builder: (_) => ClassManagementScreen(
                   className: widget.className,
-                  initialFee: widget.monthlyFee,
+                  initialFee: _currentMonthlyFee,
                 ),
               ),
             ).then((_) => _loadData()),
